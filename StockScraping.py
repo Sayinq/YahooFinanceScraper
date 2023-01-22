@@ -101,13 +101,11 @@ layout = go.Layout(title=f'{StockTicker} Stock Ticker',
                                 ),
                                 dict(step='all')
                                 ]
-                            )
-
-layout.axis.update(dict(
-    rangeslider=dict(visible=True),
-    type='date'
-    )))
-))
+                            ),
+                        rangeslider=dict(visible=True),
+                        type='date'
+    ))
+)
 
 fig = go.Figure(data=data, layout=layout)
 fig.update_layout(layout)
