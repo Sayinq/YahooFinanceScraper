@@ -17,19 +17,28 @@ import mplfinance as mpf
 #Expand, post multiple?
 #Implement Nasdaq Data Link API / Nasdaq Last Sale API for 10sec delay for real-time updatable data? 
 #Try/Except loop so it won't explode
-StockTicker = input("What is the stock symbol?: ")
-stockpanel = pd.DataFrame()
-try:
-        APPLE = yf.Ticker(StockTicker) 
+StockTicker = ''
+while StockTicker == '':
+    try:
+        APPLE = yf.Ticker(input("Which stock ticker would you like to analyze?: ")) 
         StockTicker = APPLE.info['shortName'] #User input test
     #Date parameters that we want to see in our plot
         start_date = '2021-02-02'
         end_date = '2022-01-01'
         stockpanel = APPLE.history(start=start_date, end=end_date) #Displaying within date range
-         #Cleaning possible NaN values (ew)
-except Exception as e:
-        print("Error:", e)
-        StockTicker = input("Which stock ticker would you like to analyze?: ")
+        Cleaning = stockpanel.dropna(subset=['Open', 'High', 'Low', 'Close'], how= 'all') #Cleaning possible NaN values (ew)
+    except yf.exceptions.YFinanceError:
+        print("Invalid smybol, please try again.")
+
+#Plotting it (Line Chart)
+#Try to make interactable in some way? 
+#rsi = ta.momentum.RSIIndicator(close=stockpanel['Close'])
+#stockpanel['RSI'] = rsi.rsi()
+#stockpanel[['Close', 'RSI']].plot(figsize=(10,5))
+#plt.title("Apple Inc. Stock Price")
+#plt.ylabel("Closing Price")
+#plt.xlabel("Date")
+#plt.show()
 
 #Using 'ta' Library so I can grab trend indicators for Bollinger Bands
 stockpanel['MA'] = ta.trend.sma_indicator(stockpanel['Close'])
@@ -38,12 +47,14 @@ stockpanel['Upper Band'] = stockpanel['MA'] + 2*stockpanel['STD']
 stockpanel['Lower Band'] = stockpanel['MA'] - 2*stockpanel['STD']
 
 #Using 'ta' library to implement a MACD line (Moving Average Convergence/Divergence Indicator)
-#macd_diff = ta.trend.macd_diff(stockpanel['Close'], window_fast=20, window_slow=100)
-#macd_signal = ta.trend.macd_signal(stockpanel['Close'], window=100)
-macd_diff = ta.trend.macd(stockpanel['Close'], window_fast=20, window_slow=100)
-macd_signal = ta.trend.macd(stockpanel['Close'], window_slow=100)
+macd_diff = ta.trend.macd_diff(stockpanel['Close'], window_fast=20, window_slow=100)
+macd_signal = ta.trend.macd_signal(stockpanel['Close'])
 stockpanel['MACD'] = macd_diff
 stockpanel['MACD_Signal'] = macd_signal
+
+#Using 'ta' library to implement a MACD line (Moving Average Convergence/Divergence Indicator)
+
+
 #Using 'ta' library to set Heiken Ashi values
 def heiken_ashi(ha):
     ha = ha.copy()
@@ -60,8 +71,15 @@ HeikenAishi = go.Candlestick(x=stockpanel.index,
                             high=stockpanel['HA_High'],
                             low=stockpanel['HA_Low'],
                             close=stockpanel['HA_Close'],
-                            name= StockTicker,
-)
+                            name= StockTicker)
+#Candle Stick Plot
+#Candlestick = go.Candlestick(x=stockpanel.index,
+#                    open=stockpanel['Open'],
+#                    high=stockpanel['High'],
+#                    low=stockpanel['Low'],
+#                    close=stockpanel['Close'],
+#                    name= StockTicker)
+#Tracing variables for our Upper Band and Lower Band, in which case we made green for visibility testing
 UpperBoll = go.Scatter(x = stockpanel.index,
                     y=stockpanel['Upper Band'],
                     name= 'Upper Band',
@@ -74,36 +92,29 @@ LowerBoll = go.Scatter(x = stockpanel.index,
 #Tracing variables for MACD
 MACD = go.Scatter(x=stockpanel.index, y=stockpanel['MACD'],
                 name='MACD',
-                line=dict(color='grey'))
-Signal = go.Scatter(x=stockpanel.index, y=stockpanel['MACD_Signal'],
+                line=dict(color='blue'))
+Signal = go.Scatter(x=stockpanel.index, y=stockpanel['Signal'],
                 name='Signal',
-                line=dict(color='green'))
-
-#Cleaning Data 
-
-
+                line=dict(color='yellow'),
+                row=2, col=1)
+                
 #Data that's being pulled, as well as Indicators
-
-data = [HeikenAishi, UpperBoll, LowerBoll, MACD, Signal]
+data = [HeikenAishi, UpperBoll, LowerBoll]
 
 #More layout functionality, cleaner look
 #Title scrolling with scrubber 
-fig = make_subplots(rows=2, cols=1)
-
-#Adding traces for our plot.
+fig = make_subplots(rows=1, cols=1)
 fig.add_trace(HeikenAishi)
 fig.add_trace(UpperBoll)
 fig.add_trace(LowerBoll)
 fig.add_trace(MACD)
 fig.add_trace(Signal)
-
-#Layout updates
 fig.update_layout(xaxis_rangeslider_visible=True)
 fig.update_layout(title=f'{StockTicker} Stock Ticker',
                 xaxis_title='Date',
                 yaxis_title='Closing Price',
                 hovermode='x',
-                annotations=[dict(text='',
+                annotations=[dict(text='Bollinger Bands Analysis',
                 x=0.5, y=1.05,
                 xref='paper',
                 yref='paper',
